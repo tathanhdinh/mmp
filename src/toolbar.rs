@@ -1,4 +1,14 @@
-use gtk::{ContainerExt, SeparatorToolItem, ToolButton, ToolButtonExt, Toolbar, WidgetExt};
+use std::path::PathBuf;
+use std::rc::Rc;
+
+use gtk::{
+    ApplicationWindow, ContainerExt, DialogExt, FileChooserAction, FileChooserDialog,
+    FileChooserExt, FileFilter, FileFilterExt, Image, ImageExt, SeparatorToolItem, ToolButton,
+    ToolButtonExt, Toolbar, WidgetExt,
+};
+use gtk_sys::{GTK_RESPONSE_ACCEPT, GTK_RESPONSE_CANCEL};
+
+use crate::playlist::Playlist;
 
 const PLAY_STOCK: &'static str = "gtk-media-play";
 const PAUSE_STOCK: &'static str = "gtk-media-pause";
@@ -65,19 +75,67 @@ impl MusicToolbar {
 use crate::App;
 
 impl App {
+    const RESPONSE_ACCEPT: i32 = GTK_RESPONSE_ACCEPT as i32;
+    const RESPONSE_CANCEL: i32 = GTK_RESPONSE_CANCEL as i32;
+
+    fn show_open_dialog(parent: &ApplicationWindow) -> Option<PathBuf> {
+        let dialog = FileChooserDialog::new(
+            Some("Select an MP3 audio file"),
+            Some(parent),
+            FileChooserAction::Open,
+        );
+        let filter = FileFilter::new();
+        filter.add_mime_type("audio/mp3");
+        filter.set_name("MP3 audio file");
+        dialog.add_filter(&filter);
+        dialog.add_button("Cancel", Self::RESPONSE_CANCEL);
+        dialog.add_button("Accept", Self::RESPONSE_ACCEPT);
+
+        if dialog.run() == Self::RESPONSE_ACCEPT {
+            let file = dialog.get_filename();
+            dialog.destroy();
+            file
+        } else {
+            None
+        }
+    }
+
     pub fn connect_toolbar_events(&self) {
         let window = self.window.clone();
         self.toolbar.quit_button.connect_clicked(move |_| {
             window.destroy();
         });
 
+        let playlist = self.playlist.clone();
+        let cover = self.cover.clone();
+
         let play_button = self.toolbar.play_button.clone();
         self.toolbar.play_button.connect_clicked(move |_| {
             if play_button.get_stock_id() == Some(String::from(PLAY_STOCK)) {
                 play_button.set_stock_id(PAUSE_STOCK);
+                Self::set_cover(&cover, &playlist);
             } else {
                 play_button.set_stock_id(PLAY_STOCK);
             }
         });
+
+        let parent = self.window.clone();
+        let playlist = self.playlist.clone();
+        self.toolbar.open_button.connect_clicked(move |_| {
+            let file = Self::show_open_dialog(&parent);
+            if let Some(file) = file {
+                playlist.add(&file);
+            }
+        });
+
+        let playlist = self.playlist.clone();
+        self.toolbar.remove_button.connect_clicked(move |_| {
+            playlist.remove_selection();
+        });
+    }
+
+    fn set_cover(cover: &Image, playlist: &Rc<Playlist>) {
+        cover.set_from_pixbuf(playlist.pixbuf().as_ref());
+        cover.show();
     }
 }

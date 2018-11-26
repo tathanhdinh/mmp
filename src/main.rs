@@ -1,6 +1,8 @@
 mod playlist;
 mod toolbar;
+mod mp3;
 
+use std::time::Duration;
 use self::playlist::Playlist;
 use self::toolbar::MusicToolbar;
 
@@ -81,4 +83,8 @@ fn main() {
     });
     app.connect_activate(|_| {});
     app.run(&env::args().collect::<Vec<_>>());
+}
+
+fn to_millis(duration: Duration) -> u64 {
+    duration.as_secs() * 1000 + duration.subsec_nanos() as u64 / 1_000_000
 }

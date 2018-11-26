@@ -106,7 +106,8 @@ impl App {
             window.destroy();
         });
 
-        let playlist = self.playlist.clone();
+        // let playlist = self.playlist.clone();
+        let playlist = Rc::clone(&self.playlist);
         let cover = self.cover.clone();
 
         let play_button = self.toolbar.play_button.clone();
@@ -120,7 +121,7 @@ impl App {
         });
 
         let parent = self.window.clone();
-        let playlist = self.playlist.clone();
+        let playlist = Rc::clone(&self.playlist);
         self.toolbar.open_button.connect_clicked(move |_| {
             let file = Self::show_open_dialog(&parent);
             if let Some(file) = file {
@@ -128,7 +129,7 @@ impl App {
             }
         });
 
-        let playlist = self.playlist.clone();
+        let playlist = Rc::clone(&self.playlist);
         self.toolbar.remove_button.connect_clicked(move |_| {
             playlist.remove_selection();
         });

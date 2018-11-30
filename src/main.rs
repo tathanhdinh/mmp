@@ -1,28 +1,36 @@
+mod mp3;
+mod player;
 mod playlist;
 mod toolbar;
-mod mp3;
 
-use std::time::Duration;
-use self::playlist::Playlist;
-use self::toolbar::MusicToolbar;
+use self::{playlist::Playlist, toolbar::MusicToolbar};
 
 use gio::{ApplicationExt, ApplicationExtManual, ApplicationFlags};
-use gtk::prelude::Inhibit;
 use gtk::{
+    prelude::Inhibit,
     Adjustment, Application, ApplicationWindow, ApplicationWindowExt, ContainerExt, GtkWindowExt,
     Image, ImageExt,
     Orientation::{Horizontal, Vertical},
     Scale, ScaleExt, SeparatorToolItem, ToolButton, ToolButtonExt, Toolbar, WidgetExt,
 };
-use std::env;
-use std::rc::Rc;
+use std::{
+    env,
+    rc::Rc,
+    sync::{Arc, Mutex},
+    time::Duration,
+};
 
 const PLAY_STOCK: &'static str = "gtk-media-play";
+
+struct State {
+    stopped: bool,
+}
 
 struct App {
     adjustment: Adjustment,
     cover: Image,
     playlist: Rc<Playlist>,
+    state: Arc<Mutex<State>>,
     toolbar: MusicToolbar,
     window: ApplicationWindow,
 }
@@ -36,8 +44,10 @@ impl App {
         let vbox = gtk::Box::new(Vertical, 0);
         vbox.add(&mt.toolbar);
 
+        let state = Arc::new(Mutex::new(State { stopped: true }));
+
         // add playlist
-        let pl = Rc::new(Playlist::new());
+        let pl = Rc::new(Playlist::new(state.clone()));
         vbox.add(&pl.treeview);
 
         // add cover...
@@ -57,6 +67,7 @@ impl App {
             adjustment: adj,
             cover: img,
             playlist: pl,
+            state,
             toolbar: mt,
             window: aw,
         };

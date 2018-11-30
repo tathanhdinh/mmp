@@ -1,4 +1,7 @@
-use std::path::Path;
+use std::{
+    path::Path,
+    sync::{Arc, Mutex},
+};
 
 use gdk_pixbuf::{InterpType, Pixbuf, PixbufExt, PixbufLoader, PixbufLoaderExt};
 use gtk::{
@@ -7,6 +10,8 @@ use gtk::{
     TreeViewColumn, TreeViewColumnExt, TreeViewExt, Type, WidgetExt,
 };
 use id3::Tag;
+
+use crate::{player::Player, State};
 
 const THUMBNAIL_COLUMN: u32 = 0;
 const TITLE_COLUMN: u32 = 1;
@@ -23,6 +28,7 @@ const THUMBNAIL_SIZE: i32 = 64;
 
 pub(crate) struct Playlist {
     pub model: ListStore,
+    player: Player,
     pub treeview: TreeView,
 }
 
@@ -88,7 +94,7 @@ impl Playlist {
         }
     }
 
-    pub fn new() -> Self {
+    pub(crate) fn new(state: Arc<Mutex<State>>) -> Self {
         let model = ListStore::new(&[
             Pixbuf::static_type(),
             Type::String,
@@ -108,11 +114,12 @@ impl Playlist {
 
         Playlist {
             model,
+            player: Player::new(state.clone()),
             treeview: tw,
         }
     }
 
-    pub fn add(&self, path: &Path) {
+    pub(crate) fn add(&self, path: &Path) {
         let filename = path
             .file_stem()
             .unwrap_or_default()
@@ -158,20 +165,38 @@ impl Playlist {
         self.model.set_value(&row, PATH_COLUMN, &path.to_value());
     }
 
-    pub fn remove_selection(&self) {
+    pub(crate) fn remove_selection(&self) {
         let selection = self.treeview.get_selection();
         if let Some((_, iter)) = selection.get_selected() {
             self.model.remove(&iter);
         }
     }
 
-    pub fn pixbuf(&self) -> Option<Pixbuf> {
+    pub(crate) fn pixbuf(&self) -> Option<Pixbuf> {
         let selection = self.treeview.get_selection();
         if let Some((_, iter)) = selection.get_selected() {
             let value = self.model.get_value(&iter, PIXBUF_COLUMN as i32);
             value.get()
         } else {
             None
+        }
+    }
+
+    fn selected_path(&self) -> Option<String> {
+        let selection = self.treeview.get_selection();
+        if let Some((_, iter)) = selection.get_selected() {
+            let value = self.model.get_value(&iter, PATH_COLUMN as i32);
+            return value.get::<String>();
+        }
+        None
+    }
+
+    pub fn play(&self) -> bool {
+        if let Some(path) = self.selected_path() {
+            self.player.load(&path);
+            true
+        } else {
+            false
         }
     }
 }

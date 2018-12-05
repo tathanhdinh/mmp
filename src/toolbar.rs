@@ -1,5 +1,4 @@
-use std::path::PathBuf;
-use std::rc::Rc;
+use std::{path::PathBuf, rc::Rc, sync::Arc};
 
 use gtk::{
     ApplicationWindow, ContainerExt, DialogExt, FileChooserAction, FileChooserDialog,
@@ -66,10 +65,6 @@ impl MusicToolbar {
             toolbar,
         }
     }
-
-    // pub fn toolbar(&self) -> &Toolbar {
-    //     &self.toolbar
-    // }
 }
 
 use crate::App;
@@ -111,6 +106,7 @@ impl App {
         let cover = self.cover.clone();
 
         let play_button = self.toolbar.play_button.clone();
+        let state = Arc::clone(&self.state);
         self.toolbar.play_button.connect_clicked(move |_| {
             if play_button.get_stock_id() == Some(String::from(PLAY_STOCK)) {
                 play_button.set_stock_id(PAUSE_STOCK);

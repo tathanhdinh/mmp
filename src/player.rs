@@ -43,7 +43,10 @@ pub struct Player {
 
 impl Player {
     pub(crate) fn new(app_state: Arc<Mutex<super::State>>) -> Self {
-        fn iter_to_buffer<I: Iterator<Item=i16>>(iter: &mut I, buffer: &mut [[i16; 2]; BUFFER_SIZE]) -> usize {
+        fn iter_to_buffer<I: Iterator<Item = i16>>(
+            iter: &mut I,
+            buffer: &mut [[i16; 2]; BUFFER_SIZE],
+        ) -> usize {
             let mut iter = iter.take(BUFFER_SIZE);
             let mut index = 0;
             while let Some(sample1) = iter.next() {
@@ -70,17 +73,18 @@ impl Player {
                             self::Action::Load(path) => {
                                 let file = File::open(path).unwrap();
                                 source = Some(Mp3Decoder::new(BufReader::new(file)).unwrap());
-                                let rate = source.as_ref().map(|src| {
-                                    src.sample_rate()
-                                }).unwrap_or(DEFAULT_RATE);
+                                let rate = source
+                                    .as_ref()
+                                    .map(|src| src.sample_rate())
+                                    .unwrap_or(DEFAULT_RATE);
                                 playback = Playback::new("MP3", "MP3 Playback", None, rate);
 
                                 // app_state.lock().unwrap().stopped = false;
                                 let mut guard = app_state.lock().unwrap();
                                 guard.stopped = false;
-                            },
+                            }
 
-                            self::Action::Stop => {},
+                            self::Action::Stop => {}
                         }
                     } else if *event_loop.playing.lock().unwrap() {
                         let mut written = false;
@@ -115,5 +119,9 @@ impl Player {
 
     fn emit(&self, action: Action) {
         self.event_loop.queue.push(action);
+    }
+
+    fn set_playing(&self, playing: bool) {
+        *self.event_loop.playing.lock().unwrap() = playing;
     }
 }

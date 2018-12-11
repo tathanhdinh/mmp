@@ -4,6 +4,7 @@ use std::{
     path::{Path, PathBuf},
     sync::{Arc, Condvar, Mutex},
     thread,
+    time::Duration,
 };
 
 // use crossbeam::sync::SegQueue;
@@ -123,5 +124,10 @@ impl Player {
 
     fn set_playing(&self, playing: bool) {
         *self.event_loop.playing.lock().unwrap() = playing;
+    }
+
+    pub fn compute_duration<P: AsRef<Path>>(path: P) -> Option<Duration> {
+        let file = File::open(path).unwrap();
+        Mp3Decoder::compute_duration(BufReader::new(file))
     }
 }

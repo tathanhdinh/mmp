@@ -14,15 +14,18 @@ use gtk::{
     Scale, ScaleExt, SeparatorToolItem, ToolButton, ToolButtonExt, Toolbar, WidgetExt,
 };
 use std::{
+    collections::HashMap,
     env,
     rc::Rc,
     sync::{Arc, Mutex},
     time::Duration,
 };
 
-const PLAY_STOCK: &'static str = "gtk-media-play";
+// const PLAY_STOCK: &'static str = "gtk-media-play";
 
 struct State {
+    current_time: u64,
+    durations: HashMap<String, u64>,
     stopped: bool,
 }
 

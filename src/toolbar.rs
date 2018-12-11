@@ -104,16 +104,25 @@ impl App {
         // let playlist = self.playlist.clone();
         let playlist = Rc::clone(&self.playlist);
         let cover = self.cover.clone();
+        let state = Arc::clone(&self.state);
 
         let play_button = self.toolbar.play_button.clone();
-        let state = Arc::clone(&self.state);
+
         self.toolbar.play_button.connect_clicked(move |_| {
-            if play_button.get_stock_id() == Some(String::from(PLAY_STOCK)) {
-                play_button.set_stock_id(PAUSE_STOCK);
-                Self::set_cover(&cover, &playlist);
-            } else {
-                play_button.set_stock_id(PLAY_STOCK);
+            if state.lock().unwrap().stopped {
+                if playlist.play() {
+                    play_button.set_stock_id(PAUSE_STOCK);
+                    Self::set_cover(&cover, &playlist);
+                } else {
+                    play_button.set_stock_id(PLAY_STOCK);
+                }
             }
+            // if play_button.get_stock_id() == Some(String::from(PLAY_STOCK)) {
+            //     play_button.set_stock_id(PAUSE_STOCK);
+            //     Self::set_cover(&cover, &playlist);
+            // } else {
+            //     play_button.set_stock_id(PLAY_STOCK);
+            // }
         });
 
         let parent = self.window.clone();
@@ -135,4 +144,6 @@ impl App {
         cover.set_from_pixbuf(playlist.pixbuf().as_ref());
         cover.show();
     }
+
+    // fn set_image_icon(button: &ToolButton, )
 }

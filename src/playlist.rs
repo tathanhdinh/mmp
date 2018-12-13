@@ -1,6 +1,8 @@
 use std::{
+    cell::RefCell,
     path::Path,
     sync::{Arc, Mutex},
+    thread,
 };
 
 use gdk_pixbuf::{InterpType, Pixbuf, PixbufExt, PixbufLoader, PixbufLoaderExt};
@@ -27,8 +29,10 @@ const IMAGE_SIZE: i32 = 256;
 const THUMBNAIL_SIZE: i32 = 64;
 
 pub(crate) struct Playlist {
+    current_song: RefCell<Option<String>>,
     pub model: ListStore,
     player: Player,
+    state: Arc<Mutex<State>>,
     pub treeview: TreeView,
 }
 
@@ -113,13 +117,28 @@ impl Playlist {
         Self::create_columns(&tw);
 
         Playlist {
+            current_song: RefCell::new(None),
             model,
             player: Player::new(state.clone()),
+            state,
             treeview: tw,
         }
     }
 
+    fn compute_duration(&self, path: &Path) {
+        let state = Arc::clone(&self.state);
+        let path = path.to_string_lossy().to_string();
+        thread::spawn(move || {
+            if let Some(duration) = Player::compute_duration(&path) {
+                let mut state = state.lock().unwrap();
+                state.durations.insert(path, crate::to_millis(duration));
+            }
+        });
+    }
+
     pub(crate) fn add(&self, path: &Path) {
+        self.compute_duration(path);
+
         let filename = path
             .file_stem()
             .unwrap_or_default()
@@ -182,7 +201,7 @@ impl Playlist {
         }
     }
 
-    fn selected_path(&self) -> Option<String> {
+    pub fn selected_path(&self) -> Option<String> {
         let selection = self.treeview.get_selection();
         if let Some((_, iter)) = selection.get_selected() {
             let value = self.model.get_value(&iter, PATH_COLUMN as i32);

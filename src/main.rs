@@ -47,7 +47,11 @@ impl App {
         let vbox = gtk::Box::new(Vertical, 0);
         vbox.add(&mt.toolbar);
 
-        let state = Arc::new(Mutex::new(State { stopped: true }));
+        let state = Arc::new(Mutex::new(State {
+            current_time: 0,
+            durations: HashMap::new(),
+            stopped: true,
+        }));
 
         // add playlist
         let pl = Rc::new(Playlist::new(state.clone()));
@@ -81,7 +85,24 @@ impl App {
         app
     }
 
-    fn connect_events(&self) {}
+    fn connect_events(&self) {
+        let playlist = Rc::clone(&self.playlist);
+        let adjustment = self.adjustment.clone();
+        let state = Arc::clone(&self.state);
+        // let play_image = self.toolbar.play_image.clone();
+        gtk::timeout_add(100, move || {
+            let state = state.lock().unwrap();
+            if let Some(path) = playlist.selected_path() {
+                if let Some(ref duration) = state.durations.get(&path) {
+                    adjustment.set_upper(duration as f64);
+                }
+
+                if state.stopped {
+
+                }
+            }
+        });
+    }
 }
 
 fn main() {

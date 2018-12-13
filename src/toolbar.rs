@@ -5,12 +5,24 @@ use gtk::{
     FileChooserExt, FileFilter, FileFilterExt, Image, ImageExt, SeparatorToolItem, ToolButton,
     ToolButtonExt, Toolbar, WidgetExt,
 };
-use gtk_sys::{GTK_RESPONSE_ACCEPT, GTK_RESPONSE_CANCEL};
+use gtk_sys::{
+    GTK_RESPONSE_ACCEPT, GTK_RESPONSE_CANCEL, GTK_STOCK_MEDIA_PAUSE, GTK_STOCK_MEDIA_PLAY,
+    GTK_STOCK_OK,
+};
+
+use libc::c_char;
 
 use crate::playlist::Playlist;
 
 const PLAY_STOCK: &'static str = "gtk-media-play";
 const PAUSE_STOCK: &'static str = "gtk-media-pause";
+
+pub(crate) const PLAY_ICON: &'static str = PLAY_STOCK;
+pub(crate) const PAUSE_ICON: &'static str = PAUSE_STOCK;
+
+pub(crate) fn set_image_icon(button: &ToolButton, icon: *const c_char) {
+    button.set_stock_id(icon)
+}
 
 pub(crate) struct MusicToolbar {
     pub open_button: ToolButton,
@@ -114,7 +126,8 @@ impl App {
                     play_button.set_stock_id(PAUSE_STOCK);
                     Self::set_cover(&cover, &playlist);
                 } else {
-                    play_button.set_stock_id(PLAY_STOCK);
+                    // play_button.set_stock_id(PLAY_STOCK);
+                    play_button.set_icon_name(GTK_STOCK_MEDIA_PLAY);
                 }
             }
             // if play_button.get_stock_id() == Some(String::from(PLAY_STOCK)) {

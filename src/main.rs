@@ -8,8 +8,8 @@ use self::{playlist::Playlist, toolbar::MusicToolbar};
 use gio::{ApplicationExt, ApplicationExtManual, ApplicationFlags};
 use gtk::{
     prelude::Inhibit,
-    Adjustment, Application, ApplicationWindow, ApplicationWindowExt, ContainerExt, GtkWindowExt,
-    Image, ImageExt,
+    Adjustment, AdjustmentExt, Application, ApplicationWindow, ApplicationWindowExt, ContainerExt,
+    Continue, GtkWindowExt, Image, ImageExt,
     Orientation::{Horizontal, Vertical},
     Scale, ScaleExt, SeparatorToolItem, ToolButton, ToolButtonExt, Toolbar, WidgetExt,
 };
@@ -93,14 +93,13 @@ impl App {
         gtk::timeout_add(100, move || {
             let state = state.lock().unwrap();
             if let Some(path) = playlist.selected_path() {
-                if let Some(ref duration) = state.durations.get(&path) {
-                    adjustment.set_upper(duration as f64);
-                }
-
-                if state.stopped {
-
+                if let Some(duration) = state.durations.get(&path) {
+                    adjustment.set_upper(*duration as f64);
                 }
             }
+
+            adjustment.set_value(state.current_time as f64);
+            Continue(true)
         });
     }
 }

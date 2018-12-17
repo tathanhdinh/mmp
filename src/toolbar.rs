@@ -1,4 +1,4 @@
-use std::{path::PathBuf, rc::Rc, sync::Arc};
+use std::{ffi::CStr, path::PathBuf, rc::Rc, sync::Arc};
 
 use gtk::{
     ApplicationWindow, ContainerExt, DialogExt, FileChooserAction, FileChooserDialog,
@@ -21,7 +21,9 @@ pub(crate) const PLAY_ICON: &'static str = PLAY_STOCK;
 pub(crate) const PAUSE_ICON: &'static str = PAUSE_STOCK;
 
 pub(crate) fn set_image_icon(button: &ToolButton, icon: *const c_char) {
-    button.set_stock_id(icon)
+    let icon = unsafe { CStr::from_ptr(icon).to_str().unwrap() };
+    // button.set_stock_id(icon)
+    button.set_icon_name(icon)
 }
 
 pub(crate) struct MusicToolbar {
@@ -123,11 +125,16 @@ impl App {
         self.toolbar.play_button.connect_clicked(move |_| {
             if state.lock().unwrap().stopped {
                 if playlist.play() {
-                    play_button.set_stock_id(PAUSE_STOCK);
+                    // play_button.set_stock_id(PAUSE_STOCK);
+                    let icon_name =
+                        unsafe { CStr::from_ptr(GTK_STOCK_MEDIA_PAUSE).to_str().unwrap() };
+                    play_button.set_icon_name(icon_name);
                     Self::set_cover(&cover, &playlist);
                 } else {
                     // play_button.set_stock_id(PLAY_STOCK);
-                    play_button.set_icon_name(GTK_STOCK_MEDIA_PLAY);
+                    let icon_name =
+                        unsafe { CStr::from_ptr(GTK_STOCK_MEDIA_PLAY).to_str().unwrap() };
+                    play_button.set_icon_name(icon_name);
                 }
             }
             // if play_button.get_stock_id() == Some(String::from(PLAY_STOCK)) {

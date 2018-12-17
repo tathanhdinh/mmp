@@ -24,6 +24,8 @@ enum Action {
 
 #[derive(Clone)]
 struct EventLoop {
+    // condition_variable: Arc::new((Mutex::new(false), Condvar::new())),
+    condition_variable: Arc<(Mutex<bool>, Condvar)>,
     queue: Arc<SegQueue<Action>>,
     playing: Arc<Mutex<bool>>,
 }
@@ -31,6 +33,7 @@ struct EventLoop {
 impl EventLoop {
     fn new() -> Self {
         EventLoop {
+            condition_variable: Arc::new((Mutex::new(false), Condvar::new())),
             queue: Arc::new(SegQueue::new()),
             playing: Arc::new(Mutex::new(false)),
         }
@@ -62,9 +65,20 @@ impl Player {
 
         let event_loop = EventLoop::new();
         {
-            let app_state = app_state.clone();
+            let app_state = Arc::clone(&app_state);
             let event_loop = event_loop.clone();
+            let condition_variable = Arc::clone(&event_loop.condition_variable);
+
             thread::spawn(move || {
+                let block = || {
+                    let (ref lock, ref condition_variable) = *condition_variable;
+                    let mut started = lock.lock().unwrap();
+                    *started = false;
+                    while !*started {
+                        started = condition_variable.wait(started).unwrap();
+                    }
+                };
+
                 let mut buffer = [[0; 2]; BUFFER_SIZE];
                 let mut playback = Playback::new("MP3", "MP3 Playback", None, DEFAULT_RATE);
                 let mut source = None;

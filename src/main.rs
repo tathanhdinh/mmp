@@ -9,7 +9,7 @@ use gio::{ApplicationExt, ApplicationExtManual, ApplicationFlags};
 use gtk::{
     prelude::Inhibit,
     Adjustment, AdjustmentExt, Application, ApplicationWindow, ApplicationWindowExt, ContainerExt,
-    Continue, GtkWindowExt, Image, ImageExt,
+    Continue, GtkWindowExt, Image, ImageExt, Label, LabelExt,
     Orientation::{Horizontal, Vertical},
     Scale, ScaleExt, SeparatorToolItem, ToolButton, ToolButtonExt, Toolbar, WidgetExt,
 };
@@ -32,6 +32,8 @@ struct State {
 struct App {
     adjustment: Adjustment,
     cover: Image,
+    current_time_label: Label,
+    duration_label: Label,
     playlist: Rc<Playlist>,
     state: Arc<Mutex<State>>,
     toolbar: MusicToolbar,
@@ -40,8 +42,8 @@ struct App {
 
 impl App {
     fn new(app: &Application) -> Self {
-        let aw = ApplicationWindow::new(app);
-        aw.set_title("A minimal music player");
+        let app_window = ApplicationWindow::new(app);
+        app_window.set_title("A minimal music player");
 
         let mt = MusicToolbar::new();
         let vbox = gtk::Box::new(Vertical, 0);
@@ -61,22 +63,39 @@ impl App {
         let img = Image::new();
         vbox.add(&img);
 
-        // add scale
-        let adj = Adjustment::new(0.0, 0.0, 10.0, 0.0, 0.0, 0.0);
-        let scale = Scale::new(Horizontal, &adj);
-        scale.set_draw_value(false);
-        vbox.add(&scale);
-        aw.add(&vbox);
+        let hbox = gtk::Box::new(Horizontal, 10);
+        vbox.add(&hbox);
 
-        aw.show_all();
+        // add scale
+        let adjustment = Adjustment::new(0.0, 0.0, 10.0, 0.0, 0.0, 0.0);
+
+        let scale = Scale::new(Horizontal, &adjustment);
+        scale.set_draw_value(false);
+        scale.set_hexpand(true);
+        hbox.add(&scale);
+
+        let current_time_label = Label::new(None);
+        hbox.add(&current_time_label);
+
+        let slash_label = Label::new("/");
+        hbox.add(&slash_label);
+
+        let duration_label = Label::new(None);
+        duration_label.set_margin_right(10);
+        hbox.add(&duration_label);
+
+        app_window.add(&vbox);
+        app_window.show_all();
 
         let app = App {
-            adjustment: adj,
+            adjustment,
             cover: img,
+            current_time_label,
+            duration_label,
             playlist: pl,
             state,
             toolbar: mt,
-            window: aw,
+            window: app_window,
         };
 
         app.connect_events();
@@ -85,7 +104,16 @@ impl App {
         app
     }
 
+    fn millis_to_minutes(millis: u64) -> String {
+        let mut seconds = millis / 1_000;
+        let minutes = seconds / 60;
+        seconds %= 60;
+        format!("{}:{:02}", minutes, seconds)
+    }
+
     fn connect_events(&self) {
+        let current_time_label = self.current_time_label.clone();
+        let duration_label = self.duration_label.clone();
         let playlist = Rc::clone(&self.playlist);
         let adjustment = self.adjustment.clone();
         let state = Arc::clone(&self.state);
@@ -94,9 +122,13 @@ impl App {
             let state = state.lock().unwrap();
             if let Some(path) = playlist.selected_path() {
                 if let Some(duration) = state.durations.get(&path) {
-                    adjustment.set_upper(*duration as f64);
+                    let duration = *duration;
+                    adjustment.set_upper(duration as f64);
+                    duration_label.set_text(&Self::millis_to_minutes(duration));
                 }
             }
+
+            current_time_label.set_text(&Self::millis_to_minutes(state.current_time));
 
             adjustment.set_value(state.current_time as f64);
             Continue(true)
@@ -111,6 +143,8 @@ fn main() {
         ApplicationFlags::empty(),
     )
     .expect("Error");
+
+    gstreamer::init().expect("Gstreamer fails to initialize");
 
     app.connect_startup(|a| {
         let _ = App::new(a);

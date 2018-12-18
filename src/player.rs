@@ -94,9 +94,9 @@ impl Player {
                                     .unwrap_or(DEFAULT_RATE);
                                 playback = Playback::new("MP3", "MP3 Playback", None, rate);
 
-                                // app_state.lock().unwrap().stopped = false;
-                                let mut guard = app_state.lock().unwrap();
-                                guard.stopped = false;
+                                app_state.lock().unwrap().stopped = false;
+                                // let mut guard = app_state.lock().unwrap();
+                                // guard.stopped = false;
                             }
 
                             self::Action::Stop => {}
@@ -105,6 +105,7 @@ impl Player {
                         let mut written = false;
                         if let Some(ref mut source) = source {
                             let size = iter_to_buffer(source, &mut buffer);
+                            println!("buffer size: {}", size);
                             if size > 0 {
                                 playback.write(&buffer[..size]);
                                 written = true;
@@ -115,7 +116,11 @@ impl Player {
                             app_state.lock().unwrap().stopped = true;
                             *event_loop.playing.lock().unwrap() = false;
                             source = None;
+
+                            block()
                         }
+                    } else {
+                        block()
                     }
                 }
             });
